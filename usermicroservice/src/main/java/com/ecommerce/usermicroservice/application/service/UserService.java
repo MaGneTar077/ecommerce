@@ -49,5 +49,21 @@ public class UserService implements RegisterUserUseCase {
         eventStoreRepository.save(event);
 
         userEventProducer.publish(event);
+
+        UserEvent welcomeEvent = new UserEvent();
+        welcomeEvent.setEventId(UUID.randomUUID().toString());
+        welcomeEvent.setTimestamp(Instant.now());
+        welcomeEvent.setSource("UserService");
+        welcomeEvent.setTopic("welcome-flow");
+        welcomeEvent.setPayload(Map.of(
+                "to", user.getEmail(),
+                "subject", "¡Bienvenido a nuestra plataforma!",
+                "content", "Hola " + user.getName() + ", gracias por registrarte en nuestro e-commerce."
+        ));
+        welcomeEvent.setSnapshot(userMap);
+
+        eventStoreRepository.save(welcomeEvent);
+        userEventProducer.publish(welcomeEvent);
+
     }
 }
