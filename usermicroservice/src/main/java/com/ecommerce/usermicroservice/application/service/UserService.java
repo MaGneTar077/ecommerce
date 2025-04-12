@@ -6,6 +6,7 @@ import com.ecommerce.usermicroservice.domain.model.User;
 import com.ecommerce.usermicroservice.domain.model.UserEvent;
 import com.ecommerce.usermicroservice.domain.repository.EventStoreRepository;
 import com.ecommerce.usermicroservice.domain.repository.UserRepository;
+import com.ecommerce.usermicroservice.infraestructure.producer.UserEventProducer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ public class UserService implements RegisterUserUseCase {
     private final UserRepository userRepository;
     private final EventStoreRepository eventStoreRepository;
     private final ObjectMapper objectMapper;
+    private final UserEventProducer userEventProducer;
 
     @Override
     public void register(RegisterUserRequest request) {
@@ -45,5 +47,7 @@ public class UserService implements RegisterUserUseCase {
         event.setSnapshot(userMap);
 
         eventStoreRepository.save(event);
+
+        userEventProducer.publish(event);
     }
 }
