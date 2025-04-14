@@ -1,4 +1,4 @@
-version: '3.8'
+
 
 services:
   zookeeper:
@@ -37,3 +37,28 @@ services:
       KAFKA_BROKER_CONNECT: kafka:29092
     depends_on:
       - kafka
+
+  mongo:
+    image: mongo
+    container_name: mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  cartmicroservice:
+      build:
+        context: .
+        dockerfile: Dockerfile
+      container_name: cartmicroservice
+      ports:
+        - "8080:8080"
+      depends_on:
+        - mongo
+        - kafka
+      environment:
+        SPRING_DATA_MONGODB_URI: mongodb://mongo:27017/CartMicroservice
+        SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+
+volumes:
+   mongo-data:

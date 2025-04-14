@@ -70,10 +70,22 @@ private final KafkaProducer kafkaProducer;
                 event.setTimestamp(TimeUtils.nowUTC());
                 event.setSource("CartRemoval");
                 event.setTopic("cart-removals");
-                event.setPayload(request);
+        event.setPayload(Map.of(
+                "userId", request.getUserId(),
+                "productId", productId,
+                "message", " /* item eliminado */"
+        ));
                 event.setSnapshot(snaphot);
 
-        kafkaProducer.sendMessage("cart-removals", event);
+        kafkaProducer.sendMessage("notifications", Map.of(
+                "source", "CartService",
+                "topic", "notifications",
+                "payload", Map.of(
+                        "userId", request.getUserId(),
+                        "productId", productId,
+                        "message", " /* item eliminado */"
+                )
+        ));
         eventlogRepository.save(event);
     }
 
