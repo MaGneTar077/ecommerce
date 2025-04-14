@@ -1,6 +1,6 @@
 package com.api.product.Infrastructure.Controller;
 
-import com.api.product.Aplication.Service.ProductService;
+import com.api.product.Application.Service.ProductService;
 import com.api.product.Domain.Entity.Product;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
