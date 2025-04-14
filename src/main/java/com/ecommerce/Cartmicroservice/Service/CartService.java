@@ -6,6 +6,7 @@ import com.ecommerce.Cartmicroservice.Domain.Repository.CartRepository;
 import com.ecommerce.Cartmicroservice.Domain.Repository.EventlogRepository;
 import com.ecommerce.Cartmicroservice.Dto.AddItemRequest;
 import com.ecommerce.Cartmicroservice.Dto.RemoveItemRequest;
+import com.ecommerce.Cartmicroservice.Kafka.KafkaProducer;
 import com.ecommerce.Cartmicroservice.Util.TimeUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ public class CartService {
 
 private final CartRepository cartRepository;
 private final EventlogRepository eventlogRepository;
+private final KafkaProducer kafkaProducer;
 
     public void addItem(AddItemRequest request){
        var item = cartRepository.findByUserIdAndProductId(request.getUserId(), request.getProductId()).orElse(new CartItem());
@@ -44,10 +46,11 @@ private final EventlogRepository eventlogRepository;
         event.setEventId(UUID.randomUUID().toString());
         event.setTimestamp(TimeUtils.nowUTC());
         event.setSource("CartUpdated");
-        event.setTopic("card-updates");
+        event.setTopic("cart-updates");
         event.setPayload(request);
         event.setSnapshot(snapshot);
 
+        kafkaProducer.sendMessage("cart-updates", event);
         eventlogRepository.save(event);
     }
 
@@ -70,7 +73,8 @@ private final EventlogRepository eventlogRepository;
                 event.setPayload(request);
                 event.setSnapshot(snaphot);
 
-                eventlogRepository.save(event);
+        kafkaProducer.sendMessage("cart-removals", event);
+        eventlogRepository.save(event);
     }
 
 }
