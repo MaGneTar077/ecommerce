@@ -3,6 +3,7 @@ import { MongoOrderRepository } from '../../infraestructure/db/MongoOrderReposit
 import { CreateOrderUseCase } from '../../application/usecase/CreateOrderUseCase';
 import { Order } from '../../domain/models/Order';
 import { producer } from '../../infraestructure/kafka/KafkaProducer';
+import { v4 as uuidv4 } from 'uuid'; // Asegúrate de tener 'uuid' instalado
 
 export class OrderController {
   static async createOrder(req: Request, res: Response) {
@@ -11,58 +12,45 @@ export class OrderController {
 
       const total = items.reduce((sum: number, item: any) => sum + item.quantity * item.price, 0);
 
-      // 🔸 Crear Order sin payload ni snapshot en el modelo
+      // 🔸 Crear orden en la base de datos
       const order = new Order(userId, items, total, null, null);
-
       const repo = new MongoOrderRepository();
       const usecase = new CreateOrderUseCase(repo);
       await usecase.execute(order);
 
+      // 🔧 Construir evento completo
+      const eventId = uuidv4();
       const createdAt = new Date().toISOString();
 
-      // 🔵 Enviar evento de orden creada
+      const kafkaEvent = {
+        eventId,
+        timestamp: createdAt,
+        source: 'OrderService',
+        topic: 'order_created',
+        payload: {
+          userId,
+          items,
+          tipoEntrega: 'express',
+          comentario: 'Dejar en la portería'
+        },
+        snapshot: {
+          estado: 'pendiente',
+          total,
+          fecha: createdAt
+        }
+      };
+
+      // 🚀 Enviar evento unificado a Kafka
       await producer.send({
         topic: 'order_created',
         messages: [
           {
-            value: JSON.stringify({
-              userId,
-              items,
-              total,
-              createdAt,
-            }),
-          },
-        ],
+            value: JSON.stringify(kafkaEvent)
+          }
+        ]
       });
 
-      // 🟢 Enviar evento de payload (automático)
-      const payload = {
-        tipoEntrega: 'express',
-        comentario: 'Dejar en la portería',
-        userId,
-      };
-
-      await producer.send({
-        topic: 'order_payload',
-        messages: [{ value: JSON.stringify(payload) }],
-      });
-
-      // 🟠 Enviar evento de snapshot (automático)
-      const snapshot = {
-        estado: 'pendiente',
-        fecha: createdAt,
-        userId,
-        total,
-      };
-
-      await producer.send({
-        topic: 'order_snapshot',
-        messages: [{ value: JSON.stringify(snapshot) }],
-      });
-
-      console.log('📨 Evento enviado a Kafka (order_created)');
-      console.log('📨 Evento enviado a Kafka (order_payload)');
-      console.log('📨 Evento enviado a Kafka (order_snapshot)');
+      console.log('📨 Evento unificado enviado a Kafka (order_created)');
 
       res.status(201).json({ message: 'Orden creada correctamente' });
     } catch (err) {
