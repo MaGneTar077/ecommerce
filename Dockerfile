@@ -1,23 +1,25 @@
-# Usa una imagen oficial de Node.js
-FROM node:18
+# Etapa 1: build
+FROM node:18 AS builder
 
-# Crear directorio de trabajo
 WORKDIR /app
 
-# Copiar package.json y package-lock.json
 COPY package*.json ./
-
-# Instalar dependencias
 RUN npm install
 
-# Copiar el resto del código
 COPY . .
-
-# Compilar TypeScript
 RUN npm run build
 
-# Exponer el puerto
+# Etapa 2: producción
+FROM node:18
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install --only=production
+
+COPY --from=builder /app/dist ./dist
+
 EXPOSE 3000
 
-# Comando para correr la app
-CMD ["npm", "run", "start:prod"]
+# 👇 Este es el cambio clave
+CMD ["node", "dist/server.js"]
