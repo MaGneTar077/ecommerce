@@ -39,7 +39,7 @@ export class OrderController {
           fecha: createdAt
         }
       };
-
+      
       // 🚀 Enviar evento unificado a Kafka
       await producer.send({
         topic: 'order_created',
